@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Khata Bahi — Digital Ledger</title>
+<meta name="theme-color" content="#1F3A34" />
+<meta name="description" content="A simple digital khata (ledger) for your shop." />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231F3A34'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='%23E8A33D' font-family='Georgia,serif'%3E₹%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FBF5E9;
+    --paper-deep: #F3EAD6;
+    --card: #FFFDF9;
+    --ink: #1F3A34;
+    --ink-soft: #3E5C54;
+    --ink-faint: #7C8F89;
+    --marigold: #E8A33D;
+    --marigold-deep: #C97F1E;
+    --thread: #A93B2E;
+    --line: #DED0AE;
+    --warm: #C97F1E;
+    --green: #2E7D53;
+    --danger: #B23A2E;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 3px rgba(31,58,52,0.08), 0 1px 2px rgba(31,58,52,0.06);
+    --shadow-md: 0 8px 24px rgba(31,58,52,0.12);
+    --shadow-lg: 0 16px 40px rgba(31,58,52,0.18);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  button{ font-family:inherit; }
+  input, select{ font-family:inherit; }
+  ::selection{ background:var(--marigold); color:var(--ink); }
+  a{ color:inherit; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  /* ---------- App shell ---------- */
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100dvh;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.06);
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    padding:18px 18px 14px;
+    border-bottom:1px dashed var(--line);
+    position:relative;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-6px; height:6px;
+    background-image: radial-gradient(circle, var(--paper-deep) 2.5px, transparent 2.6px);
+    background-size: 14px 14px;
+    background-position: 4px 0;
+  }
+  .topbar-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px;
+    background:var(--ink); color:var(--marigold);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-size:20px; font-weight:600;
+    flex-shrink:0;
+  }
+  .brand-text h1{ margin:0; font-family:var(--font-display); font-size:19px; font-weight:600; letter-spacing:0.2px; }
+  .brand-text p{ margin:0; font-size:11.5px; color:var(--ink-faint); letter-spacing:0.4px; text-transform:uppercase; }
+  .icon-btn{
+    width:40px; height:40px; border-radius:12px; border:none;
+    background:var(--card); box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; cursor:pointer; color:var(--ink);
+  }
+  .page-title{ font-family:var(--font-display); font-size:22px; font-weight:600; margin:2px 0 0; }
+  .page-sub{ font-size:13px; color:var(--ink-faint); margin:2px 0 0; }
+
+  .screen{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 16px 100px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--card);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-sm);
+    border:1px solid rgba(31,58,52,0.05);
+  }
+  .stitch-top{ position:relative; }
+  .stitch-top::before{
+    content:"";
+    position:absolute; top:8px; left:16px; right:16px; height:0;
+    border-top:2px dashed rgba(169,59,46,0.35);
+  }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px; }
+  .stat-card{
+    padding:16px 14px;
+    grid-column: span 1;
+  }
+  .stat-card.wide{ grid-column: span 2; display:flex; align-items:center; justify-content:space-between; }
+  .stat-label{ font-size:11.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; }
+  .stat-value{ font-family:var(--font-mono); font-size:24px; font-weight:600; margin-top:6px; color:var(--ink); }
+  .stat-value.money::before{ content:"₹"; font-size:18px; margin-right:2px; color:var(--ink-faint); }
+
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin:22px 2px 10px; }
+  .section-head h2{ font-family:var(--font-display); font-size:17px; margin:0; font-weight:600; }
+  .section-head span{ font-size:12.5px; color:var(--ink-faint); }
+
+  .big-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+  .big-btn{
+    border:none; border-radius:var(--radius-md); padding:16px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    font-weight:700; font-size:13.5px; cursor:pointer;
+    min-height:44px;
+  }
+  .big-btn .ic{ font-size:22px; }
+  .big-btn.primary{ background:var(--ink); color:var(--paper); }
+  .big-btn.secondary{ background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm); border:1px solid rgba(31,58,52,0.08); }
+
+  .tx-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 4px; border-bottom:1px solid var(--paper-deep);
+    cursor:pointer;
+  }
+  .tx-row:last-child{ border-bottom:none; }
+  .avatar{
+    width:42px; height:42px; border-radius:50%;
+    background:var(--paper-deep); color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:600; font-size:16px;
+    flex-shrink:0;
+  }
+  .tx-main{ flex:1; min-width:0; }
+  .tx-main .name{ font-weight:600; font-size:14.5px; }
+  .tx-main .desc{ font-size:12.5px; color:var(--ink-faint); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tx-side{ text-align:right; flex-shrink:0; }
+  .tx-amount{ font-family:var(--font-mono); font-weight:600; font-size:15px; }
+  .tx-amount.pos{ color:var(--warm); }
+  .tx-amount.neg{ color:var(--green); }
+  .tx-time{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+
+  /* ---------- Bottom nav ---------- */
+  .bottomnav{
+    position:sticky; bottom:0; z-index:30;
+    background:var(--card);
+    border-top:1px solid var(--line);
+    display:grid; grid-template-columns:repeat(4,1fr);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .nav-btn{
+    background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 2px; border-radius:12px; color:var(--ink-faint);
+    min-height:44px; font-size:10.5px; font-weight:600;
+  }
+  .nav-btn .ic{ font-size:20px; }
+  .nav-btn.active{ color:var(--ink); background:var(--paper-deep); }
+
+  /* ---------- Forms ---------- */
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; letter-spacing:0.2px; }
+  .field input, .field select, .field textarea{
+    width:100%; padding:13px 14px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--line); background:var(--card);
+    font-size:15px; color:var(--ink); min-height:44px;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--marigold); outline-offset:1px; border-color:var(--marigold);
+  }
+  .field .hint{ font-size:11.5px; color:var(--ink-faint); margin-top:5px; }
+  .amount-input-wrap{ position:relative; }
+  .amount-input-wrap .rupee{ position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--ink-faint); }
+  .amount-input-wrap input{ padding-left:30px; font-family:var(--font-mono); font-size:17px; font-weight:600; }
+
+  .quick-amounts{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip{
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink);
+    border-radius:999px; padding:9px 15px; font-size:13px; font-weight:600; cursor:pointer;
+    min-height:38px;
+  }
+  .chip.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .btn{
+    width:100%; border:none; border-radius:var(--radius-md); padding:15px;
+    font-weight:700; font-size:15px; cursor:pointer; min-height:48px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn.primary{ background:var(--marigold-deep); color:#fff; }
+  .btn.primary:disabled{ background:#D9C9A8; color:#fff; cursor:not-allowed; }
+  .btn.ghost{ background:transparent; color:var(--ink-soft); border:1.5px solid var(--line); }
+  .btn.danger{ background:var(--danger); color:#fff; }
+
+  .spinner{
+    width:18px; height:18px; border-radius:50%;
+    border:2.5px solid rgba(255,255,255,0.4); border-top-color:#fff;
+    animation:spin 0.7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* Searchable customer picker */
+  .search-list{ margin-top:8px; max-height:220px; overflow-y:auto; border-radius:var(--radius-sm); border:1.5px solid var(--line); background:var(--card); }
+  .search-item{ padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid var(--paper-deep); }
+  .search-item:last-child{ border-bottom:none; }
+  .search-item:hover, .search-item:active{ background:var(--paper-deep); }
+  .selected-customer{
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    background:var(--paper-deep); border-radius:var(--radius-sm); margin-top:8px;
+  }
+  .selected-customer .name{ font-weight:700; flex:1; }
+  .selected-customer button{ background:none; border:none; color:var(--danger); font-weight:700; cursor:pointer; font-size:13px; }
+
+  .recent-chip-row{ display:flex; gap:8px; overflow-x:auto; padding:4px 0 8px; }
+  .recent-chip{
+    flex-shrink:0; display:flex; align-items:center; gap:7px;
+    background:var(--card); border:1.5px solid var(--line); border-radius:999px;
+    padding:6px 14px 6px 6px; cursor:pointer; min-height:40px;
+  }
+  .recent-chip .avatar{ width:28px; height:28px; font-size:12px; }
+  .recent-chip .n{ font-size:13px; font-weight:600; }
+
+  /* Search bar */
+  .searchbar{
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1.5px solid var(--line); border-radius:999px;
+    padding:11px 16px; margin-bottom:14px;
+  }
+  .searchbar input{ border:none; outline:none; background:none; flex:1; font-size:14.5px; color:var(--ink); min-height:22px; }
+
+  /* Customer card in accounts list */
+  .customer-card{
+    display:flex; align-items:center; gap:12px; padding:14px; margin-bottom:10px; cursor:pointer;
+  }
+  .customer-info{ flex:1; min-width:0; }
+  .customer-info .n{ font-weight:700; font-size:15px; }
+  .customer-info .p{ font-size:12.5px; color:var(--ink-faint); margin-top:1px; }
+  .customer-bal{ text-align:right; }
+  .customer-bal .amt{ font-family:var(--font-mono); font-weight:700; font-size:15px; }
+  .customer-bal .lbl{ font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; }
+  .chevron{ color:var(--ink-faint); font-size:18px; }
+
+  .fab{
+    position:fixed; z-index:25;
+    right:calc(50% - 240px + 20px);
+    bottom:96px;
+    width:58px; height:58px; border-radius:18px;
+    background:var(--marigold-deep); color:#fff; border:none;
+    box-shadow:var(--shadow-lg); font-size:26px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  @media (max-width:520px){ .fab{ right:20px; } }
+
+  /* Empty states */
+  .empty-state{ text-align:center; padding:50px 20px; color:var(--ink-faint); }
+  .empty-state .glyph{ font-size:44px; margin-bottom:12px; }
+  .empty-state h3{ font-family:var(--font-display); color:var(--ink); font-size:17px; margin:0 0 6px; }
+  .empty-state p{ font-size:13px; margin:0; line-height:1.5; }
+
+  /* Skeleton loaders */
+  .skel{ background:linear-gradient(90deg, var(--paper-deep) 25%, #fff 37%, var(--paper-deep) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
+  @keyframes shimmer{ 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
+  .skel-row{ display:flex; gap:12px; padding:12px 4px; align-items:center; }
+  .skel-circle{ width:42px; height:42px; border-radius:50%; flex-shrink:0; }
+  .skel-lines{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .skel-line{ height:11px; }
+
+  /* ---------- Modals & sheets ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,30,27,0.5); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .overlay.center{ align-items:center; padding:20px; }
+  .sheet{
+    width:100%; max-width:480px; background:var(--paper); border-radius:24px 24px 0 0;
+    padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height:88vh; overflow-y:auto;
+    animation:slideup 0.22s ease;
+  }
+  @keyframes slideup{ from{ transform:translateY(30px); opacity:0.6; } to{ transform:translateY(0); opacity:1; } }
+  .sheet-handle{ width:38px; height:4px; background:var(--line); border-radius:99px; margin:8px auto 14px; }
+  .dialog{
+    width:100%; max-width:360px; background:var(--card); border-radius:var(--radius-lg);
+    padding:24px 22px; text-align:center; box-shadow:var(--shadow-lg);
+    animation:popin 0.18s ease;
+  }
+  @keyframes popin{ from{ transform:scale(0.92); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .dialog .glyph{ font-size:38px; margin-bottom:8px; }
+  .dialog h3{ font-family:var(--font-display); margin:0 0 8px; font-size:19px; }
+  .dialog p{ font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 20px; }
+  .dialog .row{ display:flex; gap:10px; }
+  .sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .sheet-head h3{ font-family:var(--font-display); margin:0; font-size:18px; }
+  .close-x{ background:var(--paper-deep); border:none; width:32px; height:32px; border-radius:50%; font-size:15px; cursor:pointer; color:var(--ink-soft); }
+
+  /* filters row */
+  .filter-row{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 14px; }
+
+  /* ledger header */
+  .ledger-header{ padding:20px 16px; text-align:center; }
+  .ledger-header .avatar{ width:64px; height:64px; font-size:24px; margin:0 auto 10px; }
+  .ledger-header h2{ font-family:var(--font-display); margin:2px 0 0; font-size:20px; }
+  .ledger-header .meta{ font-size:12.5px; color:var(--ink-faint); margin-top:3px; }
+  .ledger-header .balance{ margin-top:16px; }
+  .ledger-header .balance .amt{ font-family:var(--font-mono); font-size:34px; font-weight:700; }
+  .ledger-header .balance .lbl{ font-size:11.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-faint); font-weight:700; }
+  .ledger-actions{ display:flex; gap:8px; margin-top:16px; }
+  .ledger-actions button{ flex:1; padding:11px; border-radius:var(--radius-sm); border:1.5px solid var(--line); background:var(--card); font-weight:600; font-size:12.5px; cursor:pointer; }
+
+  .tx-item{ padding:13px 4px; border-bottom:1px solid var(--paper-deep); display:flex; gap:10px; align-items:center; }
+  .tx-item .info{ flex:1; min-width:0; }
+  .tx-item .info .d{ font-size:12px; color:var(--ink-faint); }
+  .tx-item .info .desc{ font-size:14px; font-weight:600; margin-top:2px; }
+  .tx-item .info .running{ font-size:11px; color:var(--ink-faint); margin-top:2px; }
+  .tx-item .amt-block{ text-align:right; }
+  .tx-item .icons{ display:flex; gap:4px; }
+  .tx-item .icons button{ background:none; border:none; font-size:15px; cursor:pointer; padding:6px; color:var(--ink-faint); }
+
+  .toast-wrap{ position:fixed; left:0; right:0; bottom:90px; z-index:80; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .toast{
+    background:var(--ink); color:var(--paper); padding:12px 18px; border-radius:999px;
+    font-size:13.5px; font-weight:600; box-shadow:var(--shadow-lg); max-width:90%;
+    display:flex; align-items:center; gap:8px; animation:toastin 0.2s ease;
+  }
+  @keyframes toastin{ from{ transform:translateY(10px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+  .settings-group{ margin-bottom:20px; }
+  .settings-group h3{ font-family:var(--font-display); font-size:15px; margin:0 0 10px; }
+  .settings-item{ padding:14px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .settings-item .lbl{ font-size:13.5px; font-weight:600; }
+  .settings-item .val{ font-size:11.5px; color:var(--ink-faint); }
+
+  .kbd-note{ font-size:12px; color:var(--ink-faint); background:var(--paper-deep); padding:10px 12px; border-radius:var(--radius-sm); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <div class="brand-mark">₹</div>
+        <div class="brand-text">
+          <h1 id="topTitle">Khata Bahi</h1>
+          <p id="topSub">Your Digital Ledger</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="onlineIndicator" title="Connection status">🌐</button>
+    </div>
+  </header>
+
+  <main class="screen" id="screen"></main>
+
+  <button class="fab hidden" id="fab">+</button>
+
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-tab="home"><span class="ic">🏠</span>Home</button>
+    <button class="nav-btn" data-tab="new"><span class="ic">➕</span>New</button>
+    <button class="nav-btn" data-tab="accounts"><span class="ic">👥</span>Accounts</button>
+    <button class="nav-btn" data-tab="settings"><span class="ic">⚙</span>Settings</button>
+  </nav>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div id="overlayRoot"></div>
+
+<script>
+/* =========================================================================
+   KHATA BAHI — Digital Ledger PWA
+   Single-file front end. No backend included.
+   All persistence happens through configurable n8n webhooks (see CONFIG below
+   and the Settings tab). If a webhook URL is left as a placeholder, the app
+   falls back to an in-memory mock so the UI is fully explorable offline.
+   ========================================================================= */
+
+/* ---------------------------- 1. CONFIG ------------------------------- */
+// Edit these, or change them live from the Settings tab. Every network call
+// in the app goes through the api.* functions below, which read from CONFIG.
+const CONFIG = {
+  webhooks: {
+    getCustomers:        "https://REPLACE_ME.n8n.cloud/webhook/get-customers",
+    getCustomer:         "https://REPLACE_ME.n8n.cloud/webhook/get-customer",
+    createCustomer:      "https://REPLACE_ME.n8n.cloud/webhook/create-customer",
+    deleteCustomer:      "https://REPLACE_ME.n8n.cloud/webhook/delete-customer",
+    createTransaction:   "https://ranwa.app.n8n.cloud/webhook-test/6cf7f3b5-6209-42e4-954e-1b5bc12d80b9",
+    editTransaction:     "https://REPLACE_ME.n8n.cloud/webhook/edit-transaction",
+    deleteTransaction:   "https://REPLACE_ME.n8n.cloud/webhook/delete-transaction",
+    getRecentTransactions: "https://REPLACE_ME.n8n.cloud/webhook/recent-transactions",
+  },
+  storeName: "My Shop",
+  useMockData: false // real webhook URLs are configured below; unset ones still fall back to mock automatically
+};
+
+function isPlaceholder(url){ return !url || url.includes("REPLACE_ME"); }
+
+/* ---------------------------- 2. MOCK DB ------------------------------ */
+// In-memory only (no localStorage — this file may run inside a preview
+// sandbox that blocks browser storage). Replace with real webhook calls by
+// setting CONFIG.useMockData = false and filling in CONFIG.webhooks.
+let DB = {
+  customers: [
+    { id:"c1", name:"Ramesh Traders", profession:"Wholesale Grocer", baththa:"2%", phone:"98765 43210", balance:1250, createdAt:"2026-04-02T10:00:00", lastUsed:"2026-07-04T18:20:00" },
+    { id:"c2", name:"Suman Devi", profession:"Tailor", baththa:"—", phone:"98111 22333", balance:-300, createdAt:"2026-05-11T09:00:00", lastUsed:"2026-07-03T12:00:00" },
+    { id:"c3", name:"Iqbal Bakery", profession:"Bakery", baththa:"1.5%", phone:"90000 11122", balance:4500, createdAt:"2026-01-20T09:00:00", lastUsed:"2026-06-29T09:00:00" },
+    { id:"c4", name:"Anita Stores", profession:"Retail Shop", baththa:"—", phone:"", balance:0, createdAt:"2026-06-01T09:00:00", lastUsed:"2026-06-20T09:00:00" },
+  ],
+  transactions: [
+    { id:"t1", customerId:"c1", customerName:"Ramesh Traders", amount:500, description:"Rice bags — 10", timestamp:"2026-07-04T18:20:00" },
+    { id:"t2", customerId:"c2", customerName:"Suman Devi", amount:-300, description:"Payment received", timestamp:"2026-07-03T12:00:00" },
+    { id:"t3", customerId:"c1", customerName:"Ramesh Traders", amount:250, description:"Oil tins", timestamp:"2026-07-02T16:40:00" },
+    { id:"t4", customerId:"c3", customerName:"Iqbal Bakery", amount:1000, description:"Flour — bulk order", timestamp:"2026-06-29T09:00:00" },
+    { id:"t5", customerId:"c1", customerName:"Ramesh Traders", amount:500, description:"Sugar bags", timestamp:"2026-06-27T11:15:00" },
+  ]
+};
+let nextTxId = 6;
+let nextCustId = 5;
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ---------------------------- 3. API LAYER ----------------------------- */
+// Every function below is the single place backend I/O happens. Swap the
+// mock branch for a real fetch() once CONFIG.useMockData is false.
+const api = {
+  async getCustomers(){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.getCustomers)){
+      await delay(500);
+      return { ok:true, data:[...DB.customers].sort((a,b)=> new Date(b.lastUsed)-new Date(a.lastUsed)) };
+    }
+    return realPost(CONFIG.webhooks.getCustomers, {});
+  },
+  async getCustomer(customerId){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.getCustomer)){
+      await delay(400);
+      const c = DB.customers.find(x=>x.id===customerId);
+      if(!c) return { ok:false, message:"Customer not found" };
+      const txs = DB.transactions.filter(t=>t.customerId===customerId).sort((a,b)=> new Date(b.timestamp)-new Date(a.timestamp));
+      return { ok:true, data:{ customer:c, transactions:txs } };
+    }
+    return realPost(CONFIG.webhooks.getCustomer, { customerId });
+  },
+  async createCustomer(payload){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.createCustomer)){
+      await delay(700);
+      const c = { id:"c"+(nextCustId++), balance:0, createdAt:new Date().toISOString(), lastUsed:new Date().toISOString(), ...payload };
+      DB.customers.push(c);
+      return { ok:true, data:c };
+    }
+    return realPost(CONFIG.webhooks.createCustomer, payload);
+  },
+  async deleteCustomer(customerId){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.deleteCustomer)){
+      await delay(600);
+      DB.customers = DB.customers.filter(c=>c.id!==customerId);
+      DB.transactions = DB.transactions.filter(t=>t.customerId!==customerId);
+      return { ok:true };
+    }
+    return realPost(CONFIG.webhooks.deleteCustomer, { customerId });
+  },
+  async createTransaction(payload){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.createTransaction)){
+      await delay(800);
+      const tx = { id:"t"+(nextTxId++), ...payload };
+      DB.transactions.unshift(tx);
+      const c = DB.customers.find(x=>x.id===payload.customerId);
+      if(c){ c.balance += payload.amount; c.lastUsed = payload.timestamp; }
+      return { ok:true, data:tx };
+    }
+    return realPost(CONFIG.webhooks.createTransaction, payload);
+  },
+  async editTransaction(txId, payload){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.editTransaction)){
+      await delay(700);
+      const tx = DB.transactions.find(t=>t.id===txId);
+      if(!tx) return { ok:false, message:"Transaction not found" };
+      const c = DB.customers.find(x=>x.id===tx.customerId);
+      if(c){ c.balance = c.balance - tx.amount + payload.amount; }
+      Object.assign(tx, payload);
+      return { ok:true, data:tx };
+    }
+    return realPost(CONFIG.webhooks.editTransaction, { id:txId, ...payload });
+  },
+  async deleteTransaction(txId){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.deleteTransaction)){
+      await delay(600);
+      const tx = DB.transactions.find(t=>t.id===txId);
+      if(tx){
+        const c = DB.customers.find(x=>x.id===tx.customerId);
+        if(c) c.balance -= tx.amount;
+      }
+      DB.transactions = DB.transactions.filter(t=>t.id!==txId);
+      return { ok:true };
+    }
+    return realPost(CONFIG.webhooks.deleteTransaction, { id:txId });
+  },
+  async getRecentTransactions(limit=10){
+    if(CONFIG.useMockData || isPlaceholder(CONFIG.webhooks.getRecentTransactions)){
+      await delay(400);
+      const list = [...DB.transactions].sort((a,b)=> new Date(b.timestamp)-new Date(a.timestamp)).slice(0,limit);
+      return { ok:true, data:list };
+    }
+    return realPost(CONFIG.webhooks.getRecentTransactions, { limit });
+  }
+};
+
+async function realPost(url, body){
+  try{
+    const res = await fetch(url, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      let msg = "Request failed ("+res.status+")";
+      try{ const j = await res.json(); if(j && j.message) msg = j.message; }catch(e){}
+      return { ok:false, message:msg };
+    }
+    const data = await res.json();
+    return { ok:true, data };
+  }catch(err){
+    return { ok:false, message: navigator.onLine ? "Could not reach the server. Please try again." : "No internet connection." };
+  }
+}
+
+/* ---------------------------- 4. UTILITIES ----------------------------- */
+function money(n){
+  const abs = Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits:0 });
+  return (n<0? "-" : "") + "₹" + abs;
+}
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+function timeAgo(iso){
+  const diff = (Date.now() - new Date(iso).getTime())/1000;
+  if(diff < 60) return "just now";
+  if(diff < 3600) return Math.floor(diff/60)+"m ago";
+  if(diff < 86400) return Math.floor(diff/3600)+"h ago";
+  return Math.floor(diff/86400)+"d ago";
+}
+function initial(name){ return (name||"?").trim().charAt(0).toUpperCase(); }
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, icon){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span>${icon||''}</span><span>${escapeHtml(msg)}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .25s'; setTimeout(()=>el.remove(),260); }, 2600);
+}
+
+let isDirty = false;
+function markDirty(v){ isDirty = v; }
+function confirmDiscard(cb){
+  if(!isDirty){ cb(); return; }
+  openDialog({
+    glyph:"⚠️", title:"Discard unsaved changes?",
+    body:"You have information you haven't saved yet. If you leave now it will be lost.",
+    buttons:[
+      { label:"Keep editing", cls:"ghost", action:closeOverlay },
+      { label:"Discard", cls:"danger", action:()=>{ markDirty(false); closeOverlay(); cb(); } }
+    ]
+  });
+}
+
+/* ---------------------------- 5. OVERLAYS ------------------------------ */
+const overlayRoot = document.getElementById('overlayRoot');
+function closeOverlay(){ overlayRoot.innerHTML = ""; }
+
+function openDialog({glyph, title, body, buttons}){
+  overlayRoot.innerHTML = `
+    <div class="overlay center" id="ov">
+      <div class="dialog">
+        <div class="glyph">${glyph||''}</div>
+        <h3>${title}</h3>
+        <p>${body||''}</p>
+        <div class="row" id="dlgBtns"></div>
+      </div>
+    </div>`;
+  const row = document.getElementById('dlgBtns');
+  buttons.forEach(b=>{
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + (b.cls||'ghost');
+    btn.style.flex = '1';
+    btn.textContent = b.label;
+    btn.onclick = b.action;
+    row.appendChild(btn);
+  });
+  document.getElementById('ov').addEventListener('click', e=>{ if(e.target.id==='ov') { /* don't allow accidental dismiss on important dialogs */ } });
+}
+
+function openSheet(innerHtml, opts={}){
+  overlayRoot.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        ${innerHtml}
+      </div>
+    </div>`;
+  if(!opts.noBackdropClose){
+    document.getElementById('ov').addEventListener('click', e=>{
+      if(e.target.id==='ov') confirmDiscard(closeOverlay);
+    });
+  }
+}
+
+/* ---------------------------- 6. ROUTER -------------------------------- */
+let currentTab = 'home';
+let ledgerFilter = 'all';
+let recentPickerCustomerId = null; // pre-selected customer when opening New Transaction from a ledger
+
+const screenEl = document.getElementById('screen');
+const fabEl = document.getElementById('fab');
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const tab = btn.dataset.tab;
+    confirmDiscard(()=> goTo(tab));
+  });
+});
+
+function goTo(tab, params={}){
+  currentTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+  fabEl.classList.add('hidden');
+  fabEl.onclick = null;
+  if(tab==='home') renderHome();
+  else if(tab==='new') renderNewTransaction(params.customerId||null);
+  else if(tab==='accounts') renderAccounts();
+  else if(tab==='settings') renderSettings();
+  else if(tab==='ledger') renderLedger(params.customerId);
+}
+
+/* ---------------------------- 7. HOME ---------------------------------- */
+async function renderHome(){
+  document.getElementById('topTitle').textContent = 'Khata Bahi';
+  document.getElementById('topSub').textContent = CONFIG.storeName;
+  screenEl.innerHTML = `
+    <div class="stat-grid" id="statGrid">
+      ${skeletonStat()}${skeletonStat()}
+      <div class="card stat-card wide"><div class="skel skel-line" style="width:60%"></div></div>
+    </div>
+    <div class="section-head"><h2>Recent Activity</h2><span>Last 10</span></div>
+    <div class="card stitch-top" id="recentCard" style="padding:6px 12px;">
+      ${skeletonRows(4)}
+    </div>
+    <div class="big-actions">
+      <button class="big-btn primary" id="btnNewTx"><span class="ic">➕</span>New Transaction</button>
+      <button class="big-btn secondary" id="btnAccts"><span class="ic">👥</span>Accounts</button>
+    </div>
+  `;
+  document.getElementById('btnNewTx').onclick = ()=> goTo('new');
+  document.getElementById('btnAccts').onclick = ()=> goTo('accounts');
+
+  const [custRes, recentRes] = await Promise.all([ api.getCustomers(), api.getRecentTransactions(10) ]);
+
+  if(custRes.ok){
+    const customers = custRes.data;
+    const totalCustomers = customers.length;
+    const totalOutstanding = customers.reduce((s,c)=> s + (c.balance>0? c.balance:0), 0);
+    const todayStr = new Date().toDateString();
+    const todayCount = (recentRes.ok? recentRes.data:[]).filter(t=> new Date(t.timestamp).toDateString()===todayStr).length;
+    document.getElementById('statGrid').innerHTML = `
+      <div class="card stat-card"><div class="stat-label">Total Customers</div><div class="stat-value">${totalCustomers}</div></div>
+      <div class="card stat-card"><div class="stat-label">Transactions Today</div><div class="stat-value">${todayCount}</div></div>
+      <div class="card stat-card wide"><div><div class="stat-label">Total Outstanding Balance</div><div class="stat-value money">${totalOutstanding.toLocaleString('en-IN')}</div></div><div style="font-size:34px;">📒</div></div>
+    `;
+  } else {
+    toast(custRes.message || "Could not load your stats.", "❌");
+  }
+
+  const recentCard = document.getElementById('recentCard');
+  if(recentRes.ok && recentRes.data.length){
+    recentCard.innerHTML = recentRes.data.map(t=> txRowHtml(t)).join('');
+    recentRes.data.forEach(t=>{
+      const row = recentCard.querySelector(`[data-txrow="${t.id}"]`);
+      if(row) row.onclick = ()=> goTo('ledger', { customerId: t.customerId });
+    });
+  } else if(recentRes.ok){
+    recentCard.innerHTML = emptyStateHtml("📭","No transactions yet","Once you record a sale or payment, it will show up here.");
+  } else {
+    recentCard.innerHTML = emptyStateHtml("🌐","Couldn't load activity", recentRes.message||"Check your connection and try again.");
+  }
+}
+
+function txRowHtml(t){
+  const positive = t.amount >= 0;
+  return `
+    <div class="tx-row" data-txrow="${t.id}">
+      <div class="avatar">${initial(t.customerName)}</div>
+      <div class="tx-main">
+        <div class="name">${escapeHtml(t.customerName)}</div>
+        <div class="desc">${escapeHtml(t.description || (positive? 'Amount added':'Payment received'))}</div>
+      </div>
+      <div class="tx-side">
+        <div class="tx-amount ${positive?'pos':'neg'}">${positive? '+':''}${money(t.amount)}</div>
+        <div class="tx-time">${timeAgo(t.timestamp)}</div>
+      </div>
+    </div>`;
+}
+
+function skeletonStat(){ return `<div class="card stat-card"><div class="skel skel-line" style="width:70%;margin-bottom:8px;"></div><div class="skel skel-line" style="width:40%;height:20px;"></div></div>`; }
+function skeletonRows(n){ return Array.from({length:n}).map(()=> `<div class="skel-row"><div class="skel skel-circle"></div><div class="skel-lines"><div class="skel skel-line" style="width:60%"></div><div class="skel skel-line" style="width:40%"></div></div></div>`).join(''); }
+function emptyStateHtml(glyph,title,body){ return `<div class="empty-state"><div class="glyph">${glyph}</div><h3>${title}</h3><p>${body}</p></div>`; }
+
+/* ---------------------------- 8. NEW TRANSACTION ------------------------ */
+let txFormState = { customer:null, amount:'', description:'' };
+
+async function renderNewTransaction(preselectCustomerId){
+  document.getElementById('topTitle').textContent = 'New Transaction';
+  document.getElementById('topSub').textContent = 'Record a sale or payment';
+  txFormState = { customer:null, amount:'', description:'' };
+  markDirty(false);
+
+  screenEl.innerHTML = `
+    <div class="card" style="padding:18px;">
+      <div class="field">
+        <label>Customer</label>
+        <input id="custSearch" placeholder="Search customer by name…" autocomplete="off" />
+        <div class="search-list hidden" id="custResults"></div>
+        <div id="selectedCustomerBox"></div>
+      </div>
+
+      <div id="recentCustWrap"></div>
+
+      <div class="field">
+        <label>Amount</label>
+        <div class="amount-input-wrap">
+          <span class="rupee">₹</span>
+          <input id="amountInput" type="number" inputmode="decimal" placeholder="0" />
+        </div>
+        <div class="hint">Positive amount = customer owes more. Negative amount = customer paid.</div>
+        <div class="quick-amounts" id="quickAmounts">
+          ${[50,100,200,500,1000].map(v=>`<button type="button" class="chip" data-amt="${v}">₹${v}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Description <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label>
+        <textarea id="descInput" rows="2" placeholder="e.g. Rice bags, payment received…"></textarea>
+      </div>
+
+      <button class="btn primary" id="saveTxBtn">Save Transaction</button>
+    </div>
+  `;
+
+  // Preselect if launched from a ledger's FAB
+  if(preselectCustomerId){
+    const res = await api.getCustomer(preselectCustomerId);
+    if(res.ok) selectCustomer(res.data.customer);
+  }
+
+  const custSearch = document.getElementById('custSearch');
+  const custResults = document.getElementById('custResults');
+  let allCustomers = [];
+  api.getCustomers().then(r=>{ if(r.ok) allCustomers = r.data; renderRecentCustomers(allCustomers); });
+
+  custSearch.addEventListener('input', ()=>{
+    const q = custSearch.value.trim().toLowerCase();
+    if(!q){ custResults.classList.add('hidden'); return; }
+    const matches = allCustomers.filter(c=> c.name.toLowerCase().includes(q)).slice(0,8);
+    if(!matches.length){
+      custResults.innerHTML = `<div class="search-item" style="color:var(--ink-faint);">No customers match “${escapeHtml(custSearch.value)}”</div>`;
+    } else {
+      custResults.innerHTML = matches.map(c=> `<div class="search-item" data-cid="${c.id}"><span>${escapeHtml(c.name)}</span><span style="color:var(--ink-faint);font-size:12px;">${money(c.balance)}</span></div>`).join('');
+      matches.forEach(c=>{
+        custResults.querySelector(`[data-cid="${c.id}"]`).onclick = ()=>{ selectCustomer(c); custResults.classList.add('hidden'); custSearch.value=''; };
+      });
+    }
+    custResults.classList.remove('hidden');
+  });
+
+  function renderRecentCustomers(list){
+    const wrap = document.getElementById('recentCustWrap');
+    const recents = [...list].sort((a,b)=> new Date(b.lastUsed)-new Date(a.lastUsed)).slice(0,6);
+    if(!recents.length){ wrap.innerHTML=''; return; }
+    wrap.innerHTML = `<div class="field"><label>Recent Customers</label><div class="recent-chip-row">${recents.map(c=> `<div class="recent-chip" data-cid="${c.id}"><div class="avatar">${initial(c.name)}</div><span class="n">${escapeHtml(c.name)}</span></div>`).join('')}</div></div>`;
+    recents.forEach(c=> wrap.querySelector(`[data-cid="${c.id}"]`).onclick = ()=> selectCustomer(c));
+  }
+
+  function selectCustomer(c){
+    txFormState.customer = c;
+    markDirty(true);
+    document.getElementById('selectedCustomerBox').innerHTML = `
+      <div class="selected-customer">
+        <div class="avatar">${initial(c.name)}</div>
+        <div class="name">${escapeHtml(c.name)}</div>
+        <button type="button" id="clearCust">Change</button>
+      </div>`;
+    document.getElementById('clearCust').onclick = ()=>{ txFormState.customer=null; document.getElementById('selectedCustomerBox').innerHTML=''; };
+  }
+
+  const amountInput = document.getElementById('amountInput');
+  amountInput.addEventListener('input', ()=>{ markDirty(true); document.querySelectorAll('#quickAmounts .chip').forEach(c=>c.classList.remove('active')); });
+  document.querySelectorAll('#quickAmounts .chip').forEach(chip=>{
+    chip.onclick = ()=>{
+      amountInput.value = chip.dataset.amt;
+      markDirty(true);
+      document.querySelectorAll('#quickAmounts .chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+    };
+  });
+  document.getElementById('descInput').addEventListener('input', markDirty.bind(null,true));
+
+  document.getElementById('saveTxBtn').onclick = ()=> submitTransaction(preselectCustomerId);
+}
+
+async function submitTransaction(returnCustomerId){
+  const amountInput = document.getElementById('amountInput');
+  const descInput = document.getElementById('descInput');
+  const btn = document.getElementById('saveTxBtn');
+
+  if(!txFormState.customer){ toast('Please choose a customer first.', '⚠️'); return; }
+  const amt = parseFloat(amountInput.value);
+  if(isNaN(amt) || amt===0){ toast('Please enter an amount.', '⚠️'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Saving…`;
+
+  const payload = {
+    customerId: txFormState.customer.id,
+    customerName: txFormState.customer.name,
+    amount: amt,
+    description: descInput.value.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  const res = await api.createTransaction(payload);
+
+  if(res.ok){
+    markDirty(false);
+    openDialog({
+      glyph:"✅", title:"Transaction Saved Successfully",
+      body:"Would you like to view this customer's account?",
+      buttons:[
+        { label:"Close", cls:"ghost", action:()=>{ closeOverlay(); goTo('home'); } },
+        { label:"View Account", cls:"primary", action:()=>{ closeOverlay(); goTo('ledger', { customerId: payload.customerId }); } }
+      ]
+    });
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = 'Save Transaction';
+    openDialog({
+      glyph:"❌", title:"Transaction Failed",
+      body: res.message || "Something went wrong while saving. Please try again.",
+      buttons:[
+        { label:"Retry", cls:"primary", action:()=>{ closeOverlay(); submitTransaction(returnCustomerId); } },
+        { label:"Cancel", cls:"ghost", action:closeOverlay }
+      ]
+    });
+  }
+}
+
+/* ---------------------------- 9. ACCOUNTS ------------------------------- */
+async function renderAccounts(){
+  document.getElementById('topTitle').textContent = 'Accounts';
+  document.getElementById('topSub').textContent = 'All your customers';
+  fabEl.classList.remove('hidden');
+  fabEl.textContent = '+';
+  fabEl.onclick = ()=> openCreateAccountSheet();
+
+  screenEl.innerHTML = `
+    <div class="searchbar">
+      <span>🔎</span>
+      <input id="acctSearch" placeholder="Search by name…" />
+    </div>
+    <div id="acctList">${skeletonRows(5)}</div>
+  `;
+
+  let all = [];
+  const res = await api.getCustomers();
+  const listEl = document.getElementById('acctList');
+  if(res.ok){
+    all = res.data;
+    paintList(all);
+  } else {
+    listEl.innerHTML = emptyStateHtml("🌐","Couldn't load accounts", res.message||"Check your connection and try again.");
+  }
+
+  document.getElementById('acctSearch').addEventListener('input', (e)=>{
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = q ? all.filter(c=> c.name.toLowerCase().includes(q)) : all;
+    paintList(filtered, q);
+  });
+
+  function paintList(list, query){
+    if(!list.length){
+      listEl.innerHTML = emptyStateHtml("👤", query? "No matches found" : "No customers yet", query? `Nobody named "${escapeHtml(query)}" yet.` : "Tap the + button to add your first customer.");
+      return;
+    }
+    listEl.innerHTML = list.map(c=> `
+      <div class="card customer-card" data-cid="${c.id}">
+        <div class="avatar">${initial(c.name)}</div>
+        <div class="customer-info">
+          <div class="n">${escapeHtml(c.name)}</div>
+          <div class="p">${escapeHtml(c.profession||'—')}${c.baththa && c.baththa!=='—' ? ' · Baththa '+escapeHtml(c.baththa) : ''}</div>
+        </div>
+        <div class="customer-bal">
+          <div class="amt" style="color:${c.balance>0? 'var(--warm)': c.balance<0? 'var(--green)':'var(--ink-faint)'}">${money(c.balance)}</div>
+          <div class="lbl">Balance</div>
+        </div>
+        <div class="chevron">›</div>
+      </div>
+    `).join('');
+    list.forEach(c=> listEl.querySelector(`[data-cid="${c.id}"]`).onclick = ()=> goTo('ledger', { customerId:c.id }));
+  }
+}
+
+function openCreateAccountSheet(){
+  markDirty(false);
+  openSheet(`
+    <div class="sheet-head"><h3>New Account</h3><button class="close-x" id="sheetClose">✕</button></div>
+    <div class="field"><label>Customer Name</label><input id="nName" placeholder="e.g. Ramesh Traders" /></div>
+    <div class="field"><label>Profession <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label><input id="nProf" placeholder="e.g. Grocer, Tailor…" /></div>
+    <div class="field"><label>Baththa <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label><input id="nBaththa" placeholder="e.g. 2%" /></div>
+    <div class="field"><label>Phone Number <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label><input id="nPhone" type="tel" placeholder="10-digit number" /></div>
+    <button class="btn primary" id="saveAcctBtn">Save Account</button>
+  `);
+  document.getElementById('sheetClose').onclick = ()=> confirmDiscard(closeOverlay);
+  ['nName','nProf','nBaththa','nPhone'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> markDirty(true)));
+  document.getElementById('saveAcctBtn').onclick = async ()=>{
+    const name = document.getElementById('nName').value.trim();
+    if(!name){ toast('Please enter a customer name.', '⚠️'); return; }
+    const btn = document.getElementById('saveAcctBtn');
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Saving…`;
+    const payload = {
+      name,
+      profession: document.getElementById('nProf').value.trim(),
+      baththa: document.getElementById('nBaththa').value.trim() || '—',
+      phone: document.getElementById('nPhone').value.trim()
+    };
+    const res = await api.createCustomer(payload);
+    if(res.ok){
+      markDirty(false);
+      toast('Account created', '✅');
+      closeOverlay();
+      renderAccounts();
+    } else {
+      btn.disabled = false; btn.innerHTML = 'Save Account';
+      toast(res.message || 'Could not create account.', '❌');
+    }
+  };
+}
+
+/* ---------------------------- 10. CUSTOMER LEDGER ------------------------ */
+async function renderLedger(customerId){
+  document.getElementById('topTitle').textContent = 'Ledger';
+  document.getElementById('topSub').textContent = 'Customer statement';
+  fabEl.classList.remove('hidden');
+  fabEl.textContent = '+';
+  fabEl.onclick = ()=> confirmDiscard(()=> goTo('new', { customerId }));
+  ledgerFilter = 'all';
+
+  screenEl.innerHTML = `<div class="card" style="padding:10px;">${skeletonRows(1)}</div><div style="margin-top:14px;">${skeletonRows(5)}</div>`;
+
+  const res = await api.getCustomer(customerId);
+  if(!res.ok){
+    screenEl.innerHTML = emptyStateHtml("🌐","Couldn't load this ledger", res.message||"Check your connection and try again.");
+    return;
+  }
+  const { customer, transactions } = res.data;
+
+  screenEl.innerHTML = `
+    <div class="card ledger-header">
+      <div class="avatar">${initial(customer.name)}</div>
+      <h2>${escapeHtml(customer.name)}</h2>
+      <div class="meta">${escapeHtml(customer.profession||'—')}${customer.baththa && customer.baththa!=='—' ? ' · Baththa '+escapeHtml(customer.baththa):''}</div>
+      <div class="meta">${customer.phone? '📞 '+escapeHtml(customer.phone)+' · ':''}Since ${fmtDate(customer.createdAt)}</div>
+      <div class="balance">
+        <div class="lbl">Current Balance</div>
+        <div class="amt" style="color:${customer.balance>0?'var(--warm)':customer.balance<0?'var(--green)':'var(--ink)'}">${money(customer.balance)}</div>
+      </div>
+      <div class="ledger-actions">
+        <button id="btnShare">📤 Share (soon)</button>
+        <button id="btnPrint">🖨 Print (soon)</button>
+        <button id="btnDeleteCust" style="color:var(--danger);">🗑 Delete</button>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Transaction History</h2><span>${transactions.length} total</span></div>
+    <div class="filter-row" id="filterRow">
+      ${['all','today','week','month','custom'].map(f=> `<button class="chip ${f==='all'?'active':''}" data-f="${f}">${f==='all'?'All':f==='today'?'Today':f==='week'?'This Week':f==='month'?'This Month':'Custom Range'}</button>`).join('')}
+    </div>
+    <div id="customRangeBox" class="hidden field" style="display:flex;gap:8px;">
+      <input type="date" id="rangeFrom" style="flex:1;" />
+      <input type="date" id="rangeTo" style="flex:1;" />
+    </div>
+    <div class="card" style="padding:6px 12px;" id="txList"></div>
+  `;
+
+  document.getElementById('btnShare').onclick = ()=> toast('Sharing statements is coming soon.', '📤');
+  document.getElementById('btnPrint').onclick = ()=> toast('Printing statements is coming soon.', '🖨');
+  document.getElementById('btnDeleteCust').onclick = ()=> confirmDeleteCustomer(customer);
+
+  let runningTotals = computeRunningBalances(transactions, customer.balance);
+
+  function paintTx(){
+    const filtered = filterTxByRange(transactions, ledgerFilter);
+    const list = document.getElementById('txList');
+    if(!filtered.length){
+      list.innerHTML = emptyStateHtml("📭","No transactions here","Try a different filter, or add a new transaction with the + button.");
+      return;
+    }
+    list.innerHTML = filtered.map(t=>{
+      const positive = t.amount>=0;
+      const running = runningTotals.get(t.id);
+      return `
+      <div class="tx-item" data-tid="${t.id}">
+        <div class="info">
+          <div class="d">${fmtDate(t.timestamp)} · ${fmtTime(t.timestamp)}</div>
+          <div class="desc">${escapeHtml(t.description || (positive?'Amount added':'Payment received'))}</div>
+          ${running!==undefined? `<div class="running">Balance after: ${money(running)}</div>`:''}
+        </div>
+        <div class="amt-block">
+          <div class="tx-amount ${positive?'pos':'neg'}">${positive?'+':''}${money(t.amount)}</div>
+          <div class="icons">
+            <button data-edit="${t.id}" title="Edit">✏️</button>
+            <button data-del="${t.id}" title="Delete">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    filtered.forEach(t=>{
+      list.querySelector(`[data-edit="${t.id}"]`).onclick = ()=> openEditTxSheet(t, customer.id);
+      list.querySelector(`[data-del="${t.id}"]`).onclick = ()=> confirmDeleteTx(t, customer.id);
+    });
+  }
+  paintTx();
+
+  document.querySelectorAll('#filterRow .chip').forEach(chip=>{
+    chip.onclick = ()=>{
+      document.querySelectorAll('#filterRow .chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      ledgerFilter = chip.dataset.f;
+      document.getElementById('customRangeBox').classList.toggle('hidden', ledgerFilter!=='custom');
+      paintTx();
+    };
+  });
+  document.getElementById('rangeFrom')?.addEventListener('change', paintTx);
+  document.getElementById('rangeTo')?.addEventListener('change', paintTx);
+  // re-bind range listeners each time custom is chosen (elements persist)
+  document.getElementById('customRangeBox').addEventListener('change', paintTx);
+
+  function filterTxByRange(list, mode){
+    if(mode==='all') return list;
+    const now = new Date();
+    if(mode==='today') return list.filter(t=> new Date(t.timestamp).toDateString()===now.toDateString());
+    if(mode==='week'){
+      const start = new Date(now); start.setDate(now.getDate()-7);
+      return list.filter(t=> new Date(t.timestamp) >= start);
+    }
+    if(mode==='month'){
+      return list.filter(t=>{ const d=new Date(t.timestamp); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
+    }
+    if(mode==='custom'){
+      const from = document.getElementById('rangeFrom')?.value;
+      const to = document.getElementById('rangeTo')?.value;
+      return list.filter(t=>{
+        const d = new Date(t.timestamp);
+        if(from && d < new Date(from)) return false;
+        if(to && d > new Date(new Date(to).getTime()+86399000)) return false;
+        return true;
+      });
+    }
+    return list;
+  }
+
+  function confirmDeleteTx(tx){
+    openDialog({
+      glyph:"⚠️", title:"Delete this transaction?",
+      body:"This action cannot be undone.",
+      buttons:[
+        { label:"Cancel", cls:"ghost", action:closeOverlay },
+        { label:"Delete", cls:"danger", action: async ()=>{
+            closeOverlay();
+            const res = await api.deleteTransaction(tx.id);
+            if(res.ok){ toast('Transaction deleted', '✅'); renderLedger(customer.id); }
+            else toast(res.message || 'Could not delete transaction.', '❌');
+          }}
+      ]
+    });
+  }
+
+  function openEditTxSheet(tx){
+    markDirty(false);
+    openSheet(`
+      <div class="sheet-head"><h3>Edit Transaction</h3><button class="close-x" id="sheetClose">✕</button></div>
+      <div class="field">
+        <label>Amount</label>
+        <div class="amount-input-wrap"><span class="rupee">₹</span><input id="eAmt" type="number" value="${tx.amount}" /></div>
+        <div class="hint">Positive = customer owes more. Negative = customer paid.</div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="eDesc" rows="2">${escapeHtml(tx.description||'')}</textarea></div>
+      <button class="btn primary" id="saveEditBtn">Save Changes</button>
+    `);
+    document.getElementById('sheetClose').onclick = ()=> confirmDiscard(closeOverlay);
+    document.getElementById('eAmt').addEventListener('input', ()=>markDirty(true));
+    document.getElementById('eDesc').addEventListener('input', ()=>markDirty(true));
+    document.getElementById('saveEditBtn').onclick = ()=>{
+      const newAmt = parseFloat(document.getElementById('eAmt').value);
+      const newDesc = document.getElementById('eDesc').value.trim();
+      if(isNaN(newAmt) || newAmt===0){ toast('Please enter a valid amount.', '⚠️'); return; }
+      openDialog({
+        glyph:"✏️", title:"Save these changes?",
+        body:"The customer's balance will be updated to match.",
+        buttons:[
+          { label:"Cancel", cls:"ghost", action:()=> openEditTxSheet(tx) },
+          { label:"Confirm", cls:"primary", action: async ()=>{
+              closeOverlay();
+              const res = await api.editTransaction(tx.id, { amount:newAmt, description:newDesc });
+              if(res.ok){ markDirty(false); toast('Transaction updated', '✅'); renderLedger(customer.id); }
+              else toast(res.message || 'Could not save changes.', '❌');
+            }}
+        ]
+      });
+    };
+  }
+}
+
+function computeRunningBalances(transactionsNewestFirst, currentBalance){
+  // transactionsNewestFirst is sorted newest -> oldest; walk backwards from current balance
+  const map = new Map();
+  let bal = currentBalance;
+  for(const t of transactionsNewestFirst){
+    map.set(t.id, bal);
+    bal -= t.amount;
+  }
+  return map;
+}
+
+function confirmDeleteCustomer(customer){
+  openDialog({
+    glyph:"⚠️", title:"Are you sure?",
+    body:`This will permanently remove ${escapeHtml(customer.name)} and their entire transaction history.`,
+    buttons:[
+      { label:"Cancel", cls:"ghost", action:closeOverlay },
+      { label:"Continue", cls:"danger", action:()=> confirmDeleteCustomerStep2(customer) }
+    ]
+  });
+}
+function confirmDeleteCustomerStep2(customer){
+  openDialog({
+    glyph:"🔒", title:"Type DELETE to confirm",
+    body:`This action cannot be undone. Type <strong>DELETE</strong> below to permanently remove this account.`,
+    buttons:[]
+  });
+  const dialogBody = document.querySelector('.dialog p');
+  const wrap = document.querySelector('.dialog');
+  const inputHtml = `<input id="deleteConfirmInput" placeholder="Type DELETE" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);margin-bottom:14px;font-size:15px;text-align:center;" />
+    <div class="row"><button class="btn ghost" id="cancelDel2" style="flex:1;">Cancel</button><button class="btn danger" id="confirmDel2" style="flex:1;" disabled>Delete</button></div>`;
+  wrap.insertAdjacentHTML('beforeend', inputHtml);
+  const input = document.getElementById('deleteConfirmInput');
+  const confirmBtn = document.getElementById('confirmDel2');
+  input.addEventListener('input', ()=>{ confirmBtn.disabled = input.value.trim() !== 'DELETE'; });
+  document.getElementById('cancelDel2').onclick = closeOverlay;
+  confirmBtn.onclick = async ()=>{
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = `<span class="spinner"></span> Deleting…`;
+    const res = await api.deleteCustomer(customer.id);
+    closeOverlay();
+    if(res.ok){ toast('Account deleted', '✅'); goTo('accounts'); }
+    else toast(res.message || 'Could not delete account.', '❌');
+  };
+}
+
+/* ---------------------------- 11. SETTINGS ------------------------------ */
+function renderSettings(){
+  document.getElementById('topTitle').textContent = 'Settings';
+  document.getElementById('topSub').textContent = 'Configure your ledger';
+
+  const hooks = CONFIG.webhooks;
+  const rows = Object.keys(hooks).map(key=> `
+    <div class="settings-item">
+      <div style="flex:1;min-width:0;">
+        <div class="lbl">${labelize(key)}</div>
+        <div class="val" id="val-${key}" style="word-break:break-all;">${escapeHtml(hooks[key])}</div>
+      </div>
+      <button class="icon-btn" data-editkey="${key}">✏️</button>
+    </div>
+  `).join('');
+
+  screenEl.innerHTML = `
+    <div class="settings-group">
+      <h3>Shop</h3>
+      <div class="card settings-item">
+        <div style="flex:1;"><div class="lbl">Store Name</div><div class="val">Shown at the top of your app</div></div>
+        <input id="storeNameInput" value="${escapeHtml(CONFIG.storeName)}" style="max-width:140px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:8px 10px;" />
+      </div>
+      <div class="card settings-item" style="margin-top:8px;">
+        <div style="flex:1;"><div class="lbl">Use Mock Data</div><div class="val">Turn off once your n8n webhooks are live</div></div>
+        <input type="checkbox" id="mockToggle" ${CONFIG.useMockData?'checked':''} style="width:22px;height:22px;" />
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>n8n Webhooks</h3>
+      <div class="card" style="padding:4px 14px;">${rows}</div>
+      <p class="kbd-note" style="margin-top:10px;">Every screen calls one function in the API layer, and every function posts to one of these URLs. Point them at your own n8n workflows to go live — no other code changes needed.</p>
+    </div>
+
+    <div class="settings-group">
+      <h3>About</h3>
+      <div class="card" style="padding:16px;">
+        <p style="margin:0 0 6px;font-size:13.5px;">Khata Bahi — a simple digital ledger for your shop.</p>
+        <p style="margin:0;font-size:12px;color:var(--ink-faint);">No backend is bundled with this app. All data is stored through the webhooks configured above.</p>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('storeNameInput').addEventListener('change', e=>{ CONFIG.storeName = e.target.value.trim() || 'My Shop'; toast('Store name updated', '✅'); });
+  document.getElementById('mockToggle').addEventListener('change', e=>{ CONFIG.useMockData = e.target.checked; toast(CONFIG.useMockData? 'Using demo data' : 'Using your live webhooks', '⚙️'); });
+
+  document.querySelectorAll('[data-editkey]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const key = btn.dataset.editkey;
+      openSheet(`
+        <div class="sheet-head"><h3>${labelize(key)}</h3><button class="close-x" id="sheetClose">✕</button></div>
+        <div class="field"><label>Webhook URL</label><input id="urlInput" value="${escapeHtml(hooks[key])}" placeholder="https://your-n8n-instance/webhook/..." /></div>
+        <button class="btn primary" id="saveUrlBtn">Save URL</button>
+      `, { noBackdropClose:true });
+      document.getElementById('sheetClose').onclick = closeOverlay;
+      document.getElementById('saveUrlBtn').onclick = ()=>{
+        CONFIG.webhooks[key] = document.getElementById('urlInput').value.trim();
+        closeOverlay();
+        toast('Webhook URL saved', '✅');
+        renderSettings();
+      };
+    };
+  });
+}
+function labelize(key){
+  return key.replace(/([A-Z])/g,' $1').replace(/^./, c=>c.toUpperCase());
+}
+
+/* ---------------------------- 12. NETWORK STATUS ------------------------ */
+function updateOnlineIndicator(){
+  const el = document.getElementById('onlineIndicator');
+  if(navigator.onLine){ el.textContent = '🌐'; el.title='Online'; }
+  else { el.textContent = '📴'; el.title='Offline'; toast('No internet connection', '🌐'); }
+}
+window.addEventListener('online', updateOnlineIndicator);
+window.addEventListener('offline', updateOnlineIndicator);
+
+/* Prevent accidental tab close with unsaved changes */
+window.addEventListener('beforeunload', (e)=>{
+  if(isDirty){ e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ---------------------------- 13. PWA SERVICE WORKER --------------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* fine if unavailable, e.g. file:// preview */ });
+  });
+}
+
+/* ---------------------------- 14. INIT ----------------------------------- */
+goTo('home');
+</script>
+</body>
+</html>
