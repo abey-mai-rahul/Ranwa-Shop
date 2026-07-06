@@ -428,22 +428,12 @@ function isPlaceholder(url){ return !url || url.includes("REPLACE_ME"); }
 // sandbox that blocks browser storage). Replace with real webhook calls by
 // setting CONFIG.useMockData = false and filling in CONFIG.webhooks.
 let DB = {
-  customers: [
-    { id:"c1", name:"Ramesh Traders", profession:"Wholesale Grocer", baththa:"2%", phone:"98765 43210", balance:1250, createdAt:"2026-04-02T10:00:00", lastUsed:"2026-07-04T18:20:00" },
-    { id:"c2", name:"Suman Devi", profession:"Tailor", baththa:"—", phone:"98111 22333", balance:-300, createdAt:"2026-05-11T09:00:00", lastUsed:"2026-07-03T12:00:00" },
-    { id:"c3", name:"Iqbal Bakery", profession:"Bakery", baththa:"1.5%", phone:"90000 11122", balance:4500, createdAt:"2026-01-20T09:00:00", lastUsed:"2026-06-29T09:00:00" },
-    { id:"c4", name:"Anita Stores", profession:"Retail Shop", baththa:"—", phone:"", balance:0, createdAt:"2026-06-01T09:00:00", lastUsed:"2026-06-20T09:00:00" },
-  ],
-  transactions: [
-    { id:"t1", customerId:"c1", customerName:"Ramesh Traders", amount:500, description:"Rice bags — 10", timestamp:"2026-07-04T18:20:00" },
-    { id:"t2", customerId:"c2", customerName:"Suman Devi", amount:-300, description:"Payment received", timestamp:"2026-07-03T12:00:00" },
-    { id:"t3", customerId:"c1", customerName:"Ramesh Traders", amount:250, description:"Oil tins", timestamp:"2026-07-02T16:40:00" },
-    { id:"t4", customerId:"c3", customerName:"Iqbal Bakery", amount:1000, description:"Flour — bulk order", timestamp:"2026-06-29T09:00:00" },
-    { id:"t5", customerId:"c1", customerName:"Ramesh Traders", amount:500, description:"Sugar bags", timestamp:"2026-06-27T11:15:00" },
-  ]
+  customers: [],
+  transactions: []
 };
-let nextTxId = 6;
-let nextCustId = 5;
+let nextTxId = 1;
+let nextCustId = 1;
+
 
 function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
