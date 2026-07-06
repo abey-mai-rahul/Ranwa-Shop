@@ -535,6 +535,8 @@ async function realPost(url, body){
       return { ok:false, message:msg };
     }
     const data = await res.json();
+    console.log("Webhook response:", data);
+    console.log("Is array?", Array.isArray(data));
     return { ok:true, data };
   }catch(err){
     return { ok:false, message: navigator.onLine ? "Could not reach the server. Please try again." : "No internet connection." };
@@ -893,9 +895,11 @@ async function renderAccounts(){
 
   let all = [];
   const res = await api.getCustomers();
+  console.log("getCustomers result:", res);
   const listEl = document.getElementById('acctList');
   if(res.ok){
     all = res.data;
+    console.log("Accounts array:", all);
     paintList(all);
   } else {
     listEl.innerHTML = emptyStateHtml("🌐","Couldn't load accounts", res.message||"Check your connection and try again.");
